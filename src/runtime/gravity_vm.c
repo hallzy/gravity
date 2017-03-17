@@ -27,46 +27,6 @@ static void gravity_gc_transform (gravity_hash_t *hashtable, gravity_value_t key
 static uint32_t cache_refcount = 0;
 static gravity_value_t cache[GRAVITY_VTABLE_SIZE];
 
-// Opaque VM struct
-struct gravity_vm {
-	gravity_hash_t		*context;							// context hash table
-	gravity_delegate_t	*delegate;							// registered runtime delegate
-	gravity_fiber_t		*fiber;								// current fiber
-	void				*data;								// custom data optionally set by the user
-	uint32_t			pc;									// program counter
-	double				time;								// useful timer for the main function
-	bool				aborted;							// set when VM has generated a runtime error
-	
-	// anonymous names
-	uint32_t			nanon;								// counter for anonymous classes (used in object_bind)
-	char				temp[64];							// temprary buffer used for anonymous names generator
-	
-	// callbacks
-	vm_transfer_cb		transfer;							// function called each time a gravity_object_t is allocated
-	vm_cleanup_cb		cleanup;							// function called when VM must be cleaned-up
-	vm_filter_cb		filter;								// function called to filter objects in the cleanup process
-	
-	// garbage collector
-	bool				gcenabled;							// flag to enable/disable garbage collector
-	gravity_int_t		memallocated;						// total number of allocated memory
-	gravity_object_t	*gchead;							// head of garbage collected objects
-	gravity_int_t		gcminthreshold;						// minimum GC threshold size to avoid spending too much time in GC
-	gravity_int_t		gcthreshold;						// memory required to trigger a GC
-	gravity_float_t		gcratio;							// ratio used in automatic recomputation of the new gcthreshold value
-	gravity_int_t		gccount;							// number of objects into GC
-	gravity_object_r	graylist;							// array of collected objects while GC is in process (gray list)
-	gravity_object_r	gcsave;								// array of temp objects that need to be saved from GC
-	
-	// internal stats fields
-	#if GRAVITY_VM_STATS
-	uint32_t			nfrealloc;							// to check how many frames reallocation occurred
-	uint32_t			nsrealloc;							// to check how many stack reallocation occurred
-	uint32_t			nstat[GRAVITY_LATEST_OPCODE];		// internal used to collect opcode usage stats
-	double				tstat[GRAVITY_LATEST_OPCODE];		// internal used to collect microbenchmarks
-	nanotime_t			t;									// internal timer
-	#endif
-};
-
 // MARK: -
 
 static void report_runtime_error (gravity_vm *vm, error_type_t error_type, const char *format, ...) {
@@ -1286,6 +1246,9 @@ gravity_vm *gravity_vm_new (gravity_delegate_t *delegate/*, uint32_t context_siz
 	vm->memallocated = 0;
 	marray_init(vm->graylist);
 	marray_init(vm->gcsave);
+
+	// Date Properties
+	vm->date_human_readable = true;
 	
 	// init base and core
 	gravity_core_register(vm);
@@ -1605,6 +1568,22 @@ bool gravity_vm_set (gravity_vm *vm, const char *key, gravity_value_t value) {
 		if ((strcmp(key, "gcminthreshold") == 0) && VALUE_ISA_INT(value)) {vm->gcminthreshold = VALUE_AS_INT(value); return true;}
 		if ((strcmp(key, "gcthreshold") == 0) && VALUE_ISA_INT(value)) {vm->gcthreshold = VALUE_AS_INT(value); return true;}
 		if ((strcmp(key, "gcratio") == 0) && VALUE_ISA_FLOAT(value)) {vm->gcratio = VALUE_AS_FLOAT(value); return true;}
+	}
+	return false;
+}
+
+// MARK: - Get/Set Date properties
+
+gravity_value_t gravity_date_get (gravity_vm *vm, const char *key) {
+	if (key) {
+		if (strcmp(key, "human_readable") == 0) return VALUE_FROM_BOOL(vm->date_human_readable);
+	}
+	return VALUE_FROM_NULL;
+}
+
+bool gravity_date_set (gravity_vm *vm, const char *key, gravity_value_t value) {
+	if (key) {
+		if ((strcmp(key, "human_readable") == 0) && VALUE_ISA_BOOL(value)) {vm->date_human_readable = VALUE_AS_BOOL(value); return true;}
 	}
 	return false;
 }

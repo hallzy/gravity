@@ -20,6 +20,50 @@ typedef bool (*vm_filter_cb) (gravity_object_t *obj);
 typedef void (*vm_transfer_cb) (gravity_vm *vm, gravity_object_t *obj);
 typedef void (*vm_cleanup_cb) (gravity_vm *vm);
 
+// Opaque VM struct
+struct gravity_vm {
+	gravity_hash_t		*context;							// context hash table
+	gravity_delegate_t	*delegate;							// registered runtime delegate
+	gravity_fiber_t		*fiber;								// current fiber
+	void				*data;								// custom data optionally set by the user
+	uint32_t			pc;									// program counter
+	double				time;								// useful timer for the main function
+	bool				aborted;							// set when VM has generated a runtime error
+	
+	// anonymous names
+	uint32_t			nanon;								// counter for anonymous classes (used in object_bind)
+	char				temp[64];							// temprary buffer used for anonymous names generator
+	
+	// callbacks
+	vm_transfer_cb		transfer;							// function called each time a gravity_object_t is allocated
+	vm_cleanup_cb		cleanup;							// function called when VM must be cleaned-up
+	vm_filter_cb		filter;								// function called to filter objects in the cleanup process
+	
+	// garbage collector
+	bool				gcenabled;							// flag to enable/disable garbage collector
+	gravity_int_t		memallocated;						// total number of allocated memory
+	gravity_object_t	*gchead;							// head of garbage collected objects
+	gravity_int_t		gcminthreshold;						// minimum GC threshold size to avoid spending too much time in GC
+	gravity_int_t		gcthreshold;						// memory required to trigger a GC
+	gravity_float_t		gcratio;							// ratio used in automatic recomputation of the new gcthreshold value
+	gravity_int_t		gccount;							// number of objects into GC
+	gravity_object_r	graylist;							// array of collected objects while GC is in process (gray list)
+	gravity_object_r	gcsave;								// array of temp objects that need to be saved from GC
+
+	// date properties
+	bool date_human_readable; // if true, months and days get text values. ex Saturday, January
+	
+	// internal stats fields
+	#if GRAVITY_VM_STATS
+	uint32_t			nfrealloc;							// to check how many frames reallocation occurred
+	uint32_t			nsrealloc;							// to check how many stack reallocation occurred
+	uint32_t			nstat[GRAVITY_LATEST_OPCODE];		// internal used to collect opcode usage stats
+	double				tstat[GRAVITY_LATEST_OPCODE];		// internal used to collect microbenchmarks
+	nanotime_t			t;									// internal timer
+	#endif
+};
+
+
 gravity_vm			*gravity_vm_new (gravity_delegate_t *delegate);
 gravity_vm			*gravity_vm_newmini (void);
 void				gravity_vm_set_callbacks (gravity_vm *vm, vm_transfer_cb vm_transfer, vm_cleanup_cb vm_cleanup);
@@ -68,6 +112,9 @@ void				gravity_vm_memupdate (gravity_vm *vm, gravity_int_t value);
 gravity_value_t		gravity_vm_get (gravity_vm *vm, const char *key);
 bool				gravity_vm_set (gravity_vm *vm, const char *key, gravity_value_t value);
 char				*gravity_vm_anonymous (gravity_vm *vm);
+
+gravity_value_t		gravity_date_get (gravity_vm *vm, const char *key);
+bool				gravity_date_set (gravity_vm *vm, const char *key, gravity_value_t value);
 
 #ifdef __cplusplus
 }

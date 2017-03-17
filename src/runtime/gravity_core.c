@@ -1688,7 +1688,16 @@ static bool date_month (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, u
 	time_t t = time(NULL);
 	// Plus 1 because tm_mon is a base 0 number
 	int tm = localtime(&t)->tm_mon + 1;
-	RETURN_VALUE(VALUE_FROM_INT(tm), rindex);
+
+	if (vm->date_human_readable == true) {
+	 char *months[] = {"January", "February", "March", "April", "May", "June",
+                       "July", "August", "September", "October", "November",
+                       "December"};
+	 RETURN_VALUE(VALUE_FROM_STRING(vm, months[tm-1], strlen(months[tm-1])), rindex);
+	}
+	else {
+	 RETURN_VALUE(VALUE_FROM_INT(tm), rindex);
+	}
 }
 
 static bool date_year (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
@@ -1704,7 +1713,15 @@ static bool date_week_day (gravity_vm *vm, gravity_value_t *args, uint16_t nargs
 	time_t t = time(NULL);
 	// Plus 1 because tm_wday is a base 0 number
 	int tm = localtime(&t)->tm_wday + 1;
-	RETURN_VALUE(VALUE_FROM_INT(tm), rindex);
+
+	if (vm->date_human_readable == true) {
+	 char *week_days[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday",
+                        "Friday", "Saturday"};
+	 RETURN_VALUE(VALUE_FROM_STRING(vm, week_days[tm-1], strlen(week_days[tm-1])), rindex);
+	}
+	else {
+	 RETURN_VALUE(VALUE_FROM_INT(tm), rindex);
+	}
 }
 
 static bool date_year_day (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
@@ -1721,6 +1738,24 @@ static bool date_daylight_savings (gravity_vm *vm, gravity_value_t *args, uint16
 	// Plus 1 because tm_wday is a base 0 number
 	int tm = localtime(&t)->tm_isdst;
 	RETURN_VALUE(VALUE_FROM_BOOL(tm), rindex);
+}
+
+static bool date_get (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
+	#pragma unused (args, nargs)
+	gravity_value_t key = GET_VALUE(1);
+	if (!VALUE_ISA_STRING(key)) RETURN_VALUE(VALUE_FROM_NULL, rindex);
+	RETURN_VALUE(gravity_date_get(vm, VALUE_AS_CSTRING(key)), rindex);
+}
+
+static bool date_set (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
+	#pragma unused (nargs, rindex)
+	gravity_value_t key = GET_VALUE(1);
+	gravity_value_t value = GET_VALUE(2);
+	if (!VALUE_ISA_STRING(key)) RETURN_NOVALUE();
+	
+	bool result = gravity_date_set(vm, VALUE_AS_CSTRING(key), value);
+	if (!result) RETURN_ERROR("Unable to apply Date setting.");
+	RETURN_NOVALUE();
 }
 
 
@@ -1976,6 +2011,9 @@ static void gravity_core_init (void) {
 	gravity_class_bind(date_meta, GRAVITY_DATE_WEEK_DAY_NAME, NEW_CLOSURE_VALUE(date_week_day));
 	gravity_class_bind(date_meta, GRAVITY_DATE_YEAR_DAY_NAME, NEW_CLOSURE_VALUE(date_year_day));
 	gravity_class_bind(date_meta, GRAVITY_DATE_DAYLIGHT_SAVINGS_NAME, NEW_CLOSURE_VALUE(date_daylight_savings));
+
+	gravity_value_t date_value = VALUE_FROM_OBJECT(computed_property(NULL, NEW_FUNCTION(date_get), NEW_FUNCTION(date_set)));
+	gravity_class_bind(date_meta, "human_readable", date_value);
 	
 	// INIT META
 	SETMETA_INITED(gravity_class_int);
@@ -1994,6 +2032,7 @@ static void gravity_core_init (void) {
 	SETMETA_INITED(gravity_class_range);
 	SETMETA_INITED(gravity_class_upvalue);
 	SETMETA_INITED(gravity_class_system);
+	SETMETA_INITED(gravity_class_date);
 	//SETMETA_INITED(gravity_class_module);
 	
 	mem_check(true);
