@@ -2042,6 +2042,35 @@ static bool string_exec (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, 
     RETURN_VALUE(v, rindex);
 }
 
+static bool string_split_after (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
+	// sanity check
+	if ((nargs != 2) || (!VALUE_ISA_STRING(GET_VALUE(1)))) RETURN_ERROR("String.split() expects 1 string separator.");
+
+	// setup arguments
+	gravity_string_t *string = VALUE_AS_STRING(GET_VALUE(0));
+	gravity_string_t *substr = VALUE_AS_STRING(GET_VALUE(1));
+	const char *sep = substr->s;
+	uint32_t seplen = substr->len;
+
+	// initialize the list to have a size of 0
+	gravity_list_t *list = gravity_list_new(vm, 0);
+
+	// split loop
+	char *original = string->s;
+	while (1) {
+		char *p = strstr(original, sep);
+		if (p == NULL || strlen(p) == seplen) {
+			marray_push(gravity_value_t, list->array, VALUE_FROM_STRING(vm, original, (uint32_t)strlen(original)));
+			break;
+		}
+		marray_push(gravity_value_t, list->array, VALUE_FROM_STRING(vm, original, (uint32_t)(p-original)+seplen));
+
+		// update original pointer
+		original = p + seplen;
+	}
+	RETURN_VALUE(VALUE_FROM_OBJECT(list), rindex);
+}
+
 // MARK: - Fiber Class -
 
 static bool fiber_create (gravity_vm *vm, gravity_value_t *args, uint16_t nargs, uint32_t rindex) {
@@ -2510,6 +2539,7 @@ static void gravity_core_init (void) {
 	gravity_class_bind(gravity_class_string, "upper", NEW_CLOSURE_VALUE(string_upper));
 	gravity_class_bind(gravity_class_string, "lower", NEW_CLOSURE_VALUE(string_lower));
 	gravity_class_bind(gravity_class_string, "split", NEW_CLOSURE_VALUE(string_split));
+	gravity_class_bind(gravity_class_string, "splitAfter", NEW_CLOSURE_VALUE(string_split_after));
     // Meta
     gravity_class_t *string_meta = gravity_class_get_meta(gravity_class_string);
     gravity_class_bind(string_meta, GRAVITY_INTERNAL_EXEC_NAME, NEW_CLOSURE_VALUE(string_exec));
