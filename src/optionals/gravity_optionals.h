@@ -11,7 +11,7 @@
 
 #ifndef GRAVITY_INCLUDE_MATH
 #define GRAVITY_INCLUDE_MATH
-#endif
+#endif // GRAVITY_INCLUDE_MATH
 
 #ifdef GRAVITY_INCLUDE_MATH
 #define GRAVITY_MATH_REGISTER(_vm)          gravity_math_register(_vm)
@@ -24,6 +24,6 @@
 #define GRAVITY_MATH_FREE()
 #define GRAVITY_MATH_NAME()                 NULL
 #define GRAVITY_ISMATH_CLASS(_c)            false
-#endif
+#endif // GRAVITY_INCLUDE_MATH
 
-#endif
+#endif // __GRAVITY_OPTIONALS__
