@@ -297,14 +297,16 @@ static void gravity_vm_loadclass (gravity_vm *vm, gravity_class_t *c) {
 
 void gravity_opt_register (gravity_vm *vm) {
     GRAVITY_MATH_REGISTER(vm);
+    GRAVITY_DATE_REGISTER(vm);
 }
 
 void gravity_opt_free() {
     GRAVITY_MATH_FREE();
+    GRAVITY_DATE_FREE();
 }
 
 bool gravity_isopt_class (gravity_class_t *c) {
-    return GRAVITY_ISMATH_CLASS(c);
+    return GRAVITY_ISMATH_CLASS(c) || GRAVITY_ISDATE_CLASS(c);
 }
 
 // MARK: -

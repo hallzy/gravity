@@ -2514,6 +2514,11 @@ static void parser_register_optional_classes (gravity_parser_t *parser) {
     gnode_t *decl = gnode_variable_create(NO_TOKEN, string_dup(GRAVITY_MATH_NAME()), NULL, 0, NULL, LAST_DECLARATION());
     gnode_array_push(decls, decl);
     #endif
+
+    #ifdef GRAVITY_INCLUDE_DATE
+    decl = gnode_variable_create(NO_TOKEN, string_dup(GRAVITY_DATE_NAME()), NULL, 0, NULL, LAST_DECLARATION());
+    gnode_array_push(decls, decl);
+    #endif
     
     // register a variable declaration node in global statements
     gnode_t *node = gnode_variable_decl_create(NO_TOKEN, TOK_KEY_VAR, 0, TOK_KEY_EXTERN, decls, NULL, LAST_DECLARATION());;
